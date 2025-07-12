@@ -1,7 +1,6 @@
 // src/components/BoundingBox.tsx
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { MouseEvent, RefObject } from 'react';
+import React, { MouseEvent, useCallback, useEffect, useRef, useState, RefObject } from 'react';
 import type { BoundingBox as BboxRatio, Template } from '../types';
 import { useTemplateStore } from '../store/templateStore';
 
@@ -13,10 +12,24 @@ interface BoundingBoxProps {
 
 type HandleType = 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se' | 'move';
 
-const BoundingBoxComponent = ({ template, isSelected, canvasRef }: BoundingBoxProps): React.ReactElement | null => {
+/**
+ * @file Renders a single, interactive bounding box instance.
+ * @component
+ *
+ * @description
+ * This component is responsible for a single extraction zone box. It handles:
+ * - Rendering the box based on its template data.
+ * - Displaying selection state and all eight resize handles.
+ * - Handling mouse events for moving and resizing the box from any edge or corner.
+ * - Updating the global store with the new coordinates after an interaction.
+ *
+ * @param {BoundingBoxProps} props - The properties for the component.
+ * @returns {JSX.Element} The rendered bounding box instance.
+ */
+const BoundingBoxComponent: React.FC<BoundingBoxProps> = ({ template, isSelected, canvasRef }) => {
   const { setSelectedTemplateId, updateTemplateBbox } = useTemplateStore();
   const [interactionType, setInteractionType] = useState<HandleType | null>(null);
-
+  
   // This ref now stores initial positions in pixels for accurate dragging
   const initialInteractionState = useRef({
     mouseX: 0,
@@ -36,7 +49,7 @@ const BoundingBoxComponent = ({ template, isSelected, canvasRef }: BoundingBoxPr
 
   const pixelBbox = getPixelBbox(template.bbox);
 
-  const handleMouseDown = (e: MouseEvent<HTMLDivElement>, type: HandleType) => {
+  const handleMouseDown = (e: MouseEvent, type: HandleType) => {
     if (!canvasRef.current) return;
     e.stopPropagation();
     setSelectedTemplateId(template.id);
@@ -64,10 +77,16 @@ const BoundingBoxComponent = ({ template, isSelected, canvasRef }: BoundingBoxPr
         case 'sw': x1 += dx; y2 += dy; break; case 'se': x2 += dx; y2 += dy; break;
       }
       
+      // Prevent the box from inverting
+      const newX1 = Math.min(x1, x2);
+      const newY1 = Math.min(y1, y2);
+      const newX2 = Math.max(x1, x2);
+      const newY2 = Math.max(y1, y2);
+
       // Convert back to ratio before updating the store
       const newBboxRatio: BboxRatio = {
-        x1: Math.min(x1, x2) / canvas.width, y1: Math.min(y1, y2) / canvas.height,
-        x2: Math.max(x1, x2) / canvas.width, y2: Math.max(y1, y2) / canvas.height,
+        x1: newX1 / canvas.width, y1: newY1 / canvas.height,
+        x2: newX2 / canvas.width, y2: newY2 / canvas.height,
       };
 
       updateTemplateBbox(template.id, newBboxRatio);
@@ -88,24 +107,33 @@ const BoundingBoxComponent = ({ template, isSelected, canvasRef }: BoundingBoxPr
     };
   }, [interactionType, handleMouseMove, handleMouseUp]);
 
-  if (!canvasRef.current) return null;
-
-  // @ts-ignore: JSX.IntrinsicElements error workaround for .tsx
   return (
     <div
       className={`bounding-box-instance ${isSelected ? 'selected' : ''}`}
       style={{
         left: `${pixelBbox.x1}px`, top: `${pixelBbox.y1}px`,
         width: `${pixelBbox.x2 - pixelBbox.x1}px`, height: `${pixelBbox.y2 - pixelBbox.y1}px`,
-        position: 'absolute',
       }}
       onMouseDown={(e) => handleMouseDown(e, 'move')}
     >
       {isSelected && (
         <>
-          {/* @ts-ignore: JSX.IntrinsicElements error workaround for .tsx */}
+          {/* Top-left */}
           <div className="resize-handle handle-nw" onMouseDown={(e) => handleMouseDown(e, 'nw')} />
-          {/* ... other handles ... */}
+          {/* Top-center */}
+          <div className="resize-handle handle-n" onMouseDown={(e) => handleMouseDown(e, 'n')} />
+          {/* Top-right */}
+          <div className="resize-handle handle-ne" onMouseDown={(e) => handleMouseDown(e, 'ne')} />
+          {/* Middle-left */}
+          <div className="resize-handle handle-w" onMouseDown={(e) => handleMouseDown(e, 'w')} />
+          {/* Middle-right */}
+          <div className="resize-handle handle-e" onMouseDown={(e) => handleMouseDown(e, 'e')} />
+          {/* Bottom-left */}
+          <div className="resize-handle handle-sw" onMouseDown={(e) => handleMouseDown(e, 'sw')} />
+          {/* Bottom-center */}
+          <div className="resize-handle handle-s" onMouseDown={(e) => handleMouseDown(e, 's')} />
+          {/* Bottom-right */}
+          <div className="resize-handle handle-se" onMouseDown={(e) => handleMouseDown(e, 'se')} />
         </>
       )}
     </div>
