@@ -1,47 +1,68 @@
 // src/components/TemplateSidebar.tsx
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTemplateStore } from '../store/templateStore';
+import { usePdfStore } from '../store/pdfStore';
+import { useExtractionStore } from '../store/extractionStore';
+import { runExtractionInWorker } from '../lib/extractor'; // Updated import
+import type { ExtractionResult } from '../types';
 import PdfUploader from './PdfUploader';
-import TemplateLoader from './TemplateLoader'; // Import the new component
+import TemplateLoader from './TemplateLoader';
+import ResultsPreview from './ResultsPreview'; // Import the new component
 
 /**
  * @file Renders the sidebar for creating and managing extraction templates.
  * @component
- *
- * @description
- * The TemplateSidebar is the main control panel. It allows users to upload a PDF,
- * view the list of extraction zones, and save/load templates. It is fully
- * driven by the `useTemplateStore`.
- *
- * @returns {JSX.Element} The rendered Template Sidebar component.
  */
 const TemplateSidebar: React.FC = () => {
   const { templates, removeTemplate } = useTemplateStore();
+  const { file, currentPageNumber } = usePdfStore(); // Get currentPageNumber from the store
+  const { status: extractionStatus, setExtractionState, reset: resetExtraction } = useExtractionStore();
 
   /**
    * Handles the "Save Template" button click.
-   * Converts the current templates to a JSON string and triggers a download.
    */
   const handleSaveTemplate = () => {
+    // ... (unchanged) ...
     if (templates.length === 0) return;
-
-    // Create a JSON string from the templates array.
-    const jsonString = JSON.stringify(templates, null, 2); // Pretty print the JSON
+    const jsonString = JSON.stringify(templates, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-
-    // Create a temporary anchor element to trigger the download.
     const a = document.createElement('a');
     a.href = url;
-    a.download = `template-${Date.now()}.json`; // e.g., template-1678886400000.json
+    a.download = `template-${Date.now()}.json`;
     document.body.appendChild(a);
     a.click();
-
-    // Clean up by revoking the object URL and removing the anchor.
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  /**
+   * Kicks off the extraction process using the Web Worker.
+   */
+  const handleExtractText = useCallback(() => {
+    if (!file || templates.length === 0) return;
+
+    resetExtraction();
+    setExtractionState({ status: 'pending', progressMessage: 'Initializing worker...' });
+
+    runExtractionInWorker({
+      file,
+      templates,
+      currentPageNumber, // Pass the current page number
+      onProgress: (progress) => {
+        setExtractionState({ status: 'pending', progressMessage: progress.progressMessage });
+      },
+      onSuccess: (results) => {
+        setExtractionState({ status: 'success', results });
+      },
+      onError: (error) => {
+        setExtractionState({ status: 'error', progressMessage: error });
+      },
+    });
+  }, [file, templates, currentPageNumber, setExtractionState, resetExtraction]);
+
+  const canExtract = file && templates.length > 0 && extractionStatus !== 'pending';
 
   return (
     <aside className="template-sidebar-container">
@@ -55,6 +76,7 @@ const TemplateSidebar: React.FC = () => {
           <h2>Extraction Zones</h2>
         </div>
         <div className="template-list">
+          {/* ... (list rendering unchanged) ... */}
           <ul>
             {templates.length === 0 && (
               <li className="empty-list-item">
@@ -76,7 +98,13 @@ const TemplateSidebar: React.FC = () => {
         </div>
       </div>
 
+      <ResultsPreview /> {/* Add the results component here */}
+
       <div className="template-actions">
+        {/* The new "Extract Text" button */}
+        <button onClick={handleExtractText} disabled={!canExtract}>
+          {extractionStatus === 'pending' ? 'Extracting...' : 'Extract Text from Current Page'}
+        </button>
         <button onClick={handleSaveTemplate} disabled={templates.length === 0}>
           Save Template
         </button>

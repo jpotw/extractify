@@ -1,6 +1,6 @@
 // src/components/PdfViewer.tsx
 
-import React, { useRef, useEffect, useState, MouseEvent } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { usePdfStore } from '../store/pdfStore';
 import { useTemplateStore } from '../store/templateStore';
@@ -14,7 +14,7 @@ interface DrawingState {
   isDrawing: boolean;
   startX: number;
   startY: number;
-  currentRect: BoundingBox | null;
+  currentRectPixels: BoundingBox | null; // Drawing state remains in pixels for UI
 }
 
 /**
@@ -29,7 +29,7 @@ const PdfViewer: React.FC = () => {
   const { templates, addTemplate, selectedTemplateId, setSelectedTemplateId, removeTemplate } = useTemplateStore();
 
   const [drawingState, setDrawingState] = useState<DrawingState>({
-    isDrawing: false, startX: 0, startY: 0, currentRect: null,
+    isDrawing: false, startX: 0, startY: 0, currentRectPixels: null,
   });
 
   useEffect(() => {
@@ -83,7 +83,7 @@ const PdfViewer: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedTemplateId, removeTemplate]);
 
-  const calculateRect = (startX: number, startY: number, endX: number, endY: number): BoundingBox => {
+  const calculateRectInPixels = (startX: number, startY: number, endX: number, endY: number): BoundingBox => {
     return {
       x1: Math.min(startX, endX), y1: Math.min(startY, endY),
       x2: Math.max(startX, endX), y2: Math.max(startY, endY),
@@ -96,7 +96,7 @@ const PdfViewer: React.FC = () => {
    * 1. If a box is selected, it deselects it.
    * 2. If no box is selected, it starts a new drawing.
    */
-  const handleMouseDown = (event: MouseEvent<HTMLDivElement>) => {
+  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     // If a template is currently selected, the primary action of a background
     // click is to deselect it.
     if (selectedTemplateId) {
@@ -105,45 +105,52 @@ const PdfViewer: React.FC = () => {
     }
 
     // If no template is selected, proceed with starting a new drawing.
-    if (!pdfDocument) return;
+    if (!pdfDocument || !canvasRef.current) return;
     const { offsetX, offsetY } = event.nativeEvent;
-    setDrawingState({ isDrawing: true, startX: offsetX, startY: offsetY, currentRect: null });
+    setDrawingState({ isDrawing: true, startX: offsetX, startY: offsetY, currentRectPixels: null });
   };
 
-  const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!drawingState.isDrawing) return;
     const { offsetX, offsetY } = event.nativeEvent;
-    const newRect = calculateRect(drawingState.startX, drawingState.startY, offsetX, offsetY);
-    setDrawingState((prevState) => ({ ...prevState, currentRect: newRect }));
+    const newRect = calculateRectInPixels(drawingState.startX, drawingState.startY, offsetX, offsetY);
+    setDrawingState((prevState) => ({ ...prevState, currentRectPixels: newRect }));
   };
 
   const handleMouseUp = () => {
-    if (!drawingState.isDrawing || !drawingState.currentRect) return;
+    if (!drawingState.isDrawing || !drawingState.currentRectPixels || !canvasRef.current) return;
 
-    const { x1, y1, x2, y2 } = drawingState.currentRect;
-    if (Math.abs(x2 - x1) < 5 || Math.abs(y2 - y1) < 5) {
-      setDrawingState({ isDrawing: false, startX: 0, startY: 0, currentRect: null });
+    const rect = drawingState.currentRectPixels;
+    if (Math.abs(rect.x2 - rect.x1) < 5 || Math.abs(rect.y2 - rect.y1) < 5) {
+      setDrawingState({ isDrawing: false, startX: 0, startY: 0, currentRectPixels: null });
       return;
     }
 
     const zoneName = prompt('Enter a name for this extraction zone:');
     if (zoneName && zoneName.trim() !== '') {
-        const newTemplate = {
-            id: `zone_${Date.now()}`,
-            name: zoneName.trim(),
-            bbox: drawingState.currentRect,
-        };
+      // Convert pixels to ratios before saving
+      const canvas = canvasRef.current;
+      const bboxRatio: BoundingBox = {
+        x1: rect.x1 / canvas.width,
+        y1: rect.y1 / canvas.height,
+        x2: rect.x2 / canvas.width,
+        y2: rect.y2 / canvas.height,
+      };
+      const newTemplate = {
+        id: `zone_${Date.now()}`,
+        name: zoneName.trim(),
+        bbox: bboxRatio,
+      };
       addTemplate(newTemplate);
-      // Automatically select the new box
       setSelectedTemplateId(newTemplate.id);
     }
-    setDrawingState({ isDrawing: false, startX: 0, startY: 0, currentRect: null });
+    setDrawingState({ isDrawing: false, startX: 0, startY: 0, currentRectPixels: null });
   };
 
   /**
    * Determines the appropriate cursor style based on the application state.
    */
-  const getCursorStyle = (): string => {
+  const getCursorStyle = (): React.CSSProperties['cursor'] => {
     // If a PDF is loaded and no box is selected, it's ready for drawing.
     if (pdfDocument && !selectedTemplateId) {
       return 'crosshair';
@@ -171,17 +178,18 @@ const PdfViewer: React.FC = () => {
               key={template.id}
               template={template}
               isSelected={template.id === selectedTemplateId}
+              canvasRef={canvasRef} // Pass canvas ref for coordinate conversion
             />
           ))}
           {/* Render the box currently being drawn */}
-          {drawingState.isDrawing && drawingState.currentRect && (
+          {drawingState.isDrawing && drawingState.currentRectPixels && (
             <div
               className="drawing-box"
               style={{
-                left: `${drawingState.currentRect.x1}px`,
-                top: `${drawingState.currentRect.y1}px`,
-                width: `${drawingState.currentRect.x2 - drawingState.currentRect.x1}px`,
-                height: `${drawingState.currentRect.y2 - drawingState.currentRect.y1}px`,
+                left: `${drawingState.currentRectPixels.x1}px`,
+                top: `${drawingState.currentRectPixels.y1}px`,
+                width: `${drawingState.currentRectPixels.x2 - drawingState.currentRectPixels.x1}px`,
+                height: `${drawingState.currentRectPixels.y2 - drawingState.currentRectPixels.y1}px`,
               }}
             />
           )}
