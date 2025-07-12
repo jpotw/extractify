@@ -40,7 +40,8 @@ const PdfViewer: React.FC = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   // Global state from Zustand stores
-  const { file, setPdfDocument, pdfDocument, currentPageNumber } = usePdfStore();
+  const { file, setPdfDocument, pdfDocument, currentPageNumber, setCurrentPageNumber } =
+    usePdfStore();
   const { templates, addTemplate } = useTemplateStore();
 
   // Local state for the drawing interaction
@@ -51,9 +52,13 @@ const PdfViewer: React.FC = () => {
     currentRect: null,
   });
 
-  // Effect for rendering the PDF (mostly unchanged)
+  // Effect for rendering the PDF
   useEffect(() => {
+    /**
+     * Asynchronously loads and renders a specific page of the active PDF document.
+     */
     const renderPdf = async () => {
+      // Guard clauses to ensure all required elements and data are present.
       if (!canvasRef.current || !file) {
         if (canvasRef.current) {
           const context = canvasRef.current.getContext('2d');
@@ -68,13 +73,29 @@ const PdfViewer: React.FC = () => {
 
       try {
         let pdf = pdfDocument;
+        // This 'isNewFile' flag prevents us from re-calculating the middle page on every render.
+        let isNewFile = false; 
+
+        // Load the document only if it hasn't been loaded yet for this file.
         if (!pdf) {
+          isNewFile = true;
           const arrayBuffer = await file.arrayBuffer();
           const loadingTask = pdfjsLib.getDocument(arrayBuffer);
           pdf = await loadingTask.promise;
-          setPdfDocument(pdf);
+          setPdfDocument(pdf); // Save the parsed document to the store.
         }
 
+        // --- NEW LOGIC: JUMP TO MIDDLE PAGE ---
+        // If it's a new file and has more than one page, jump to the middle.
+        if (isNewFile && pdf.numPages > 1) {
+          const middlePage = Math.max(1, Math.floor(pdf.numPages / 2));
+          // We set the page number in the store. The effect will re-run with the new page number.
+          setCurrentPageNumber(middlePage);
+          return; // Exit this render cycle; the next one will render the correct middle page.
+        }
+        // --- END OF NEW LOGIC ---
+
+        // Get the specified page.
         const page = await pdf.getPage(currentPageNumber);
         const viewport = page.getViewport({ scale: 1.5 });
         canvas.height = viewport.height;
@@ -87,7 +108,8 @@ const PdfViewer: React.FC = () => {
     };
 
     renderPdf();
-  }, [file, currentPageNumber, pdfDocument, setPdfDocument]);
+    // This effect should re-run whenever the file or currentPageNumber changes.
+  }, [file, currentPageNumber, pdfDocument, setPdfDocument, setCurrentPageNumber]);
 
   /**
    * Calculates the coordinates of a rectangle based on start and end points.

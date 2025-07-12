@@ -20,6 +20,13 @@ interface TemplateState {
  */
 interface TemplateActions {
   /**
+   * Replaces the entire list of templates with a new one.
+   * Useful for loading templates from a file.
+   * @param {Template[]} templates - The new array of templates.
+   */
+  setTemplates: (templates: Template[]) => void;
+
+  /**
    * Adds a new template to the list.
    * @param {Template} newTemplate - The template object to add.
    */
@@ -53,6 +60,8 @@ export const useTemplateStore = create<TemplateState & TemplateActions>((set) =>
   templates: [],
 
   // --- ACTIONS ---
+
+  setTemplates: (templates) => set({ templates }),
 
   addTemplate: (newTemplate) =>
     set((state) => ({

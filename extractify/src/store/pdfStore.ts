@@ -41,6 +41,11 @@ interface PdfActions {
    * @param {PDFDocumentProxy} pdfDoc - The parsed document proxy.
    */
   setPdfDocument: (pdfDoc: PDFDocumentProxy) => void;
+  /**
+   * Sets the current page number to be displayed.
+   * @param {number} pageNumber - The new page number (1-based).
+   */
+  setCurrentPageNumber: (pageNumber: number) => void;
 }
 
 /**
@@ -63,4 +68,6 @@ export const usePdfStore = create<PdfState & PdfActions>((set) => ({
   setFile: (file) => set({ file, pdfDocument: null, numPages: 0, currentPageNumber: 1 }),
 
   setPdfDocument: (pdfDoc) => set({ pdfDocument: pdfDoc, numPages: pdfDoc.numPages }),
+
+  setCurrentPageNumber: (pageNumber) => set({ currentPageNumber: pageNumber }),
 }));

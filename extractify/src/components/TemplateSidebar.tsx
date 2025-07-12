@@ -3,6 +3,7 @@
 import React from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import PdfUploader from './PdfUploader';
+import TemplateLoader from './TemplateLoader'; // Import the new component
 
 /**
  * @file Renders the sidebar for creating and managing extraction templates.
@@ -17,6 +18,30 @@ import PdfUploader from './PdfUploader';
  */
 const TemplateSidebar: React.FC = () => {
   const { templates, removeTemplate } = useTemplateStore();
+
+  /**
+   * Handles the "Save Template" button click.
+   * Converts the current templates to a JSON string and triggers a download.
+   */
+  const handleSaveTemplate = () => {
+    if (templates.length === 0) return;
+
+    // Create a JSON string from the templates array.
+    const jsonString = JSON.stringify(templates, null, 2); // Pretty print the JSON
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    // Create a temporary anchor element to trigger the download.
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `template-${Date.now()}.json`; // e.g., template-1678886400000.json
+    document.body.appendChild(a);
+    a.click();
+
+    // Clean up by revoking the object URL and removing the anchor.
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <aside className="template-sidebar-container">
@@ -52,8 +77,10 @@ const TemplateSidebar: React.FC = () => {
       </div>
 
       <div className="template-actions">
-        <button disabled={templates.length === 0}>Save Template</button>
-        <button>Load Template</button>
+        <button onClick={handleSaveTemplate} disabled={templates.length === 0}>
+          Save Template
+        </button>
+        <TemplateLoader />
       </div>
     </aside>
   );
