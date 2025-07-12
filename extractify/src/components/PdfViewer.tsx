@@ -90,10 +90,21 @@ const PdfViewer: React.FC = () => {
     };
   };
 
+  /**
+   * Handles the mouse down event on the main canvas wrapper.
+   * This function now has dual responsibility:
+   * 1. If a box is selected, it deselects it.
+   * 2. If no box is selected, it starts a new drawing.
+   */
   const handleMouseDown = (event: MouseEvent<HTMLDivElement>) => {
-    // Deselect any selected box if clicking on the background
-    setSelectedTemplateId(null);
+    // If a template is currently selected, the primary action of a background
+    // click is to deselect it.
+    if (selectedTemplateId) {
+      setSelectedTemplateId(null);
+      return; // Stop further execution to prevent starting a new drawing.
+    }
 
+    // If no template is selected, proceed with starting a new drawing.
     if (!pdfDocument) return;
     const { offsetX, offsetY } = event.nativeEvent;
     setDrawingState({ isDrawing: true, startX: offsetX, startY: offsetY, currentRect: null });
@@ -129,6 +140,18 @@ const PdfViewer: React.FC = () => {
     setDrawingState({ isDrawing: false, startX: 0, startY: 0, currentRect: null });
   };
 
+  /**
+   * Determines the appropriate cursor style based on the application state.
+   */
+  const getCursorStyle = (): string => {
+    // If a PDF is loaded and no box is selected, it's ready for drawing.
+    if (pdfDocument && !selectedTemplateId) {
+      return 'crosshair';
+    }
+    // Otherwise, use the default cursor (e.g., no PDF, or a box is selected).
+    return 'default';
+  };
+
   return (
     <div className="pdf-viewer-container">
       <Pagination />
@@ -138,7 +161,7 @@ const PdfViewer: React.FC = () => {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        style={{ cursor: pdfDocument ? 'crosshair' : 'default' }}
+        style={{ cursor: getCursorStyle() }} // Apply dynamic cursor style
       >
         <canvas ref={canvasRef}></canvas>
         <div className="bounding-box-overlay">
