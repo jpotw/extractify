@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTemplateStore } from '../store/templateStore';
-import PdfUploader from './PdfUploader'; // Import the new component
+import PdfUploader from './PdfUploader';
 
 /**
  * @file Renders the sidebar for creating and managing extraction templates.
@@ -20,26 +20,22 @@ const TemplateSidebar: React.FC = () => {
 
   return (
     <aside className="template-sidebar-container">
-      <div>
-        <h2>File</h2>
-        <PdfUploader /> {/* Add the uploader component here */}
+      <div className="sidebar-section">
+        <h2>File Management</h2>
+        <PdfUploader />
       </div>
 
-      <div>
-        <h2>Template Management</h2>
+      <div className="sidebar-section">
+        <div className="template-list-header">
+          <h2>Extraction Zones</h2>
+        </div>
         <div className="template-list">
-          <div className="template-list-header">
-            <h4>Extraction Zones</h4>
-          </div>
-
           <ul>
-            {/* If there are no templates, show a message */}
             {templates.length === 0 && (
               <li className="empty-list-item">
                 <p>No zones created yet. Draw on the PDF to begin.</p>
               </li>
             )}
-            {/* Dynamically render the list of templates from the store */}
             {templates.map((template) => (
               <li key={template.id}>
                 <span>{template.name}</span>
