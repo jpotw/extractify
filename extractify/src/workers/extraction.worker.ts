@@ -4,6 +4,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 import type { PDFPageProxy, TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { BoundingBox, Template, ExtractionResult } from '../types';
+import { postProcessText } from '../lib/postProcessor';
 
 /**
  * Extracts text from a specified rectangular region on a PDF page using pdf.js's text layer.
@@ -150,7 +151,7 @@ self.onmessage = async (event: MessageEvent<{ file: File; templates: Template[];
         ocrQueue.push(template);
       } else {
         // Otherwise, store the result
-        results[template.name] = text.trim();
+        results[template.name] = postProcessText(template.name, text);
       }
     });
 
@@ -175,7 +176,7 @@ self.onmessage = async (event: MessageEvent<{ file: File; templates: Template[];
           };
           // Run OCR extraction for this template
           const text = await extractWithOCR(page, pixelBbox);
-          results[template.name] = text;
+          results[template.name] = postProcessText(template.name, text);
         } catch (error) {
           // If OCR fails, log and mark as error
           console.error(`OCR failed for zone "${template.name}":`, error);

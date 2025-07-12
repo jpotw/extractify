@@ -46,6 +46,13 @@ export function runExtractionInWorker({
 
   // Listen for messages from the worker.
   worker.onmessage = (event: MessageEvent) => {
+    // --- Defensive Check ---
+    // If the worker sends an empty or malformed message, ignore it.
+    if (!event.data) {
+      console.warn('Received an empty message from the worker.');
+      return;
+    }
+
     const { type, data } = event.data;
     switch (type) {
       case 'progress':
