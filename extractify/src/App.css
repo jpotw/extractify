@@ -42,13 +42,15 @@ body {
   padding: 2rem;
   background-color: var(--viewer-bg);
   display: flex;
-  justify-content: center;
-  align-items: flex-start; /* Align canvas to the top */
+  flex-direction: column; /* Changed to column for pagination */
+  justify-content: flex-start; /* Align content to the top */
+  align-items: center; /* Center content horizontally */
   overflow: auto; /* Allow scrolling if PDF is large */
+  gap: 1.5rem;
 }
 
 .pdf-canvas-wrapper {
-  position: relative; /* This is the new wrapper for positioning */
+  position: relative;
   line-height: 0; /* Removes extra space below the canvas */
 }
 
@@ -64,22 +66,50 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none; /* Allows clicks to pass through to the canvas wrapper */
+  pointer-events: none;
 }
 
-.bounding-box {
+.bounding-box-instance {
   position: absolute;
   border: 2px solid #646cff;
   background-color: rgba(100, 108, 255, 0.2);
-  pointer-events: all; /* Make individual boxes interactive if needed later */
+  cursor: move;
+  pointer-events: all;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.bounding-box-instance.selected {
+  border-color: #f9a825;
+  background-color: rgba(249, 168, 37, 0.3);
+  z-index: 10;
 }
 
 .drawing-box {
   position: absolute;
-  border: 2px dashed #f9a825; /* A distinct style for the box being drawn */
+  border: 2px dashed #f9a825;
   background-color: rgba(249, 168, 37, 0.2);
 }
 
+/* Resize Handles */
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: #f9a825;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  z-index: 11;
+  transform: translate(-50%, -50%); /* Center the handle on the cursor */
+}
+
+.handle-nw { top: 0; left: 0; cursor: nwse-resize; }
+.handle-n { top: 0; left: 50%; cursor: ns-resize; }
+.handle-ne { top: 0; left: 100%; cursor: nesw-resize; }
+.handle-w { top: 50%; left: 0; cursor: ew-resize; }
+.handle-e { top: 50%; left: 100%; cursor: ew-resize; }
+.handle-sw { top: 100%; left: 0; cursor: nesw-resize; }
+.handle-s { top: 100%; left: 50%; cursor: ns-resize; }
+.handle-se { top: 100%; left: 100%; cursor: nwse-resize; }
 
 /* Right side: Template Sidebar */
 .template-sidebar-container {
@@ -90,7 +120,7 @@ body {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; /* Adjusted gap */
+  gap: 1.5rem;
 }
 
 .sidebar-section {
@@ -176,4 +206,26 @@ button:disabled {
   padding: 2rem 1rem !important;
   font-style: italic;
   justify-content: center !important;
+}
+
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--sidebar-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  user-select: none;
+}
+
+.pagination-container button {
+  padding: 0.4em 1em;
+}
+
+.page-info {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
