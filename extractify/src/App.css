@@ -19,6 +19,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #1e1e1e;
   color: var(--text-color);
+  overflow: hidden; /* Prevent body scrollbars */
 }
 
 /* Main application container */
@@ -26,7 +27,6 @@ body {
   display: flex;
   height: 100vh;
   width: 100vw;
-  overflow: hidden;
 }
 
 /* Two-column layout container */
@@ -42,16 +42,20 @@ body {
   padding: 2rem;
   background-color: var(--viewer-bg);
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  text-align: center;
+  align-items: flex-start; /* Align canvas to the top */
+  overflow: auto; /* Allow scrolling if PDF is large */
+}
+
+.pdf-viewer-container canvas {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
 }
 
 /* Right side: Template Sidebar */
 .template-sidebar-container {
   width: 350px;
-  flex-shrink: 0; /* Prevents the sidebar from shrinking */
+  flex-shrink: 0; /* Prevents sidebar from shrinking */
   background-color: var(--sidebar-bg);
   border-left: 1px solid var(--border-color);
   padding: 1.5rem;
@@ -117,4 +121,28 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   border-color: transparent;
+}
+
+.template-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.template-list-header h4 {
+  margin: 0;
+}
+
+.template-list-header button {
+  padding: 0.2em 0.8em;
+}
+
+.empty-list-item {
+  background-color: transparent !important;
+  text-align: center;
+  color: #888;
+  padding: 2rem 1rem !important;
+  font-style: italic;
+  justify-content: center !important;
 }

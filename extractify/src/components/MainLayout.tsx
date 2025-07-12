@@ -9,12 +9,9 @@ import TemplateSidebar from './TemplateSidebar';
  * @component
  *
  * @description
- * MainLayout defines the overall visual structure of the application,
- * creating a two-column view. It renders the `PdfViewer` component in the
- * main, larger area on the left, and the `TemplateSidebar` component in the
- * fixed-width panel on the right.
- *
- * This component does not manage state; its sole responsibility is layout.
+ * MainLayout defines the overall visual structure, creating a two-column view.
+ * It renders the `PdfViewer` on the left and `TemplateSidebar` on the right.
+ * Its sole responsibility is layout and composition.
  *
  * @returns {JSX.Element} The main two-column layout of the application.
  */
