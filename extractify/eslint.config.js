@@ -1,14 +1,13 @@
 /**
  * ESLint Configuration for Extractify
- * 
- * This configuration provides a comprehensive linting setup for an Electron application
- * with React frontend and TypeScript support. It includes separate configurations
- * for different parts of the application (main process, renderer process) and
- * integrates with Prettier for consistent code formatting.
- * 
- * @fileoverview ESLint configuration with TypeScript, React, and Prettier integration
+ *
+ * This configuration provides a comprehensive linting setup for a web application
+ * built with React and TypeScript. It integrates with Prettier for consistent
+ * code formatting.
+ *
+ * @fileoverview ESLint configuration for a React, TypeScript, and Prettier stack.
  * @author Extractify Development Team
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 import globals from "globals";
@@ -22,53 +21,22 @@ import configPrettier from "eslint-config-prettier";
 
 /**
  * ESLint Configuration Array
- * 
- * The configuration is structured in layers, with more specific rules
- * overriding general ones. Each configuration object targets specific
- * file patterns and provides appropriate linting rules.
- * 
+ *
  * @type {Array<Object>}
  */
 export default [
   /**
    * Global Configuration
-   * 
-   * Applies to all files and sets up basic ignore patterns and
-   * global linting options.
    */
   {
-    ignores: ["dist", "dist-electron", ".vite", "node_modules"],
+    ignores: ["dist", ".vite", "node_modules"],
     linterOptions: {
       reportUnusedDisableDirectives: "error",
     },
   },
 
   /**
-   * Main/Preload Process Configuration
-   * 
-   * Targets Electron main process and preload scripts (*.ts files).
-   * Enables Node.js globals and provides appropriate environment
-   * for server-side TypeScript code.
-   * 
-   * @type {Object}
-   */
-  {
-    files: ["electron/**/*.ts"],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-    },
-  },
-
-  /**
-   * Renderer Process Configuration
-   * 
-   * Targets React frontend files (*.ts, *.tsx) in the src directory.
-   * Enables JSX parsing, browser globals, and React-specific plugins
-   * for hooks and refresh functionality.
-   * 
-   * @type {Object}
+   * Renderer Process (Web App) Configuration
    */
   {
     files: ["src/**/*.{ts,tsx}"],
@@ -100,13 +68,6 @@ export default [
 
   /**
    * TypeScript and React Common Configuration
-   * 
-   * Applies to all TypeScript files (*.ts, *.tsx) and provides
-   * comprehensive linting rules for TypeScript, React, and Prettier
-   * integration. This configuration should be applied last to ensure
-   * proper rule precedence.
-   * 
-   * @type {Object}
    */
   {
     files: ["**/*.{ts,tsx}"],
