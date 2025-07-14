@@ -94,6 +94,24 @@ async function extractWithOCR(page: PDFPageProxy, bbox: BoundingBox): Promise<st
   return text.trim();
 }
 
+// This function now returns the array of TextItem objects
+async function getTextItemsFromRegion(page: PDFPageProxy, bbox: BoundingBox): Promise<TextItem[]> {
+  const textContent = await page.getTextContent();
+  const viewport = page.getViewport({ scale: 1.0 });
+
+  // Convert bbox Y coordinates from top-left to PDF.js bottom-left origin
+  const pdfY1 = viewport.height - bbox.y2;
+  const pdfY2 = viewport.height - bbox.y1;
+
+  // Filter only TextItem objects that are within the bounding box
+  return textContent.items.filter((item): item is TextItem => {
+    if (!('str' in item) || !Array.isArray(item.transform)) return false;
+    const tx = item.transform[4];
+    const ty = item.transform[5];
+    return tx >= bbox.x1 && tx <= bbox.x2 && ty >= pdfY1 && ty <= pdfY2;
+  });
+}
+
 // --- MAIN WORKER LOGIC ---
 
 /**
@@ -144,14 +162,14 @@ self.onmessage = async (event: MessageEvent<{ file: File; templates: Template[];
         y2: template.bbox.y2 * viewport.height,
       };
 
-      // Try extracting text from the region
-      const text = await extractTextFromRegion(page, pixelBbox);
-      if (!text || text.trim().length < 5) {
-        // If text is insufficient, add to the OCR queue for pass 2
+      // Get text items from the region
+      const items = await getTextItemsFromRegion(page, pixelBbox);
+      if (!items || items.length === 0) {
+        // If no items, add to the OCR queue for pass 2
         ocrQueue.push(template);
       } else {
-        // Otherwise, store the result
-        results[template.name] = postProcessText(template.name, text);
+        // Otherwise, store the result (pass TextItem[] to postProcessText)
+        results[template.name] = postProcessText(template.name, items);
       }
     });
 
@@ -176,7 +194,9 @@ self.onmessage = async (event: MessageEvent<{ file: File; templates: Template[];
           };
           // Run OCR extraction for this template
           const text = await extractWithOCR(page, pixelBbox);
-          results[template.name] = postProcessText(template.name, text);
+          // Wrap the OCR result string in a mock TextItem array
+          const mockItems: TextItem[] = [{ str: text, dir: 'ltr', width: 0, height: 0, transform: [1,0,0,1,0,0], fontName: 'g_d0_f1', hasEOL: false }];
+          results[template.name] = postProcessText(template.name, mockItems);
         } catch (error) {
           // If OCR fails, log and mark as error
           console.error(`OCR failed for zone "${template.name}":`, error);
